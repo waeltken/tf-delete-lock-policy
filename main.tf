@@ -5,7 +5,7 @@ provider "azurerm" {
 resource "azurerm_policy_definition" "lock" {
   name         = "CreateDeleteLockOnTag"
   policy_type  = "Custom"
-  mode         = "All"
+  mode         = "Indexed"
   display_name = "CreateDeleteLockOnTag"
   description  = "This policy locks a resource group when the delete_lock=true tag is applied to it."
 
@@ -80,13 +80,21 @@ data "azurerm_subscription" "current" {}
 
 resource "azurerm_subscription_policy_assignment" "sample_assignment" {
   name                 = "${azurerm_policy_definition.lock.name}_assignment"
+  display_name         = "${azurerm_policy_definition.lock.name}_assignment"
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = azurerm_policy_definition.lock.id
   location             = "West Europe"
+  parameters           = jsonencode({})
   # The identity block is required to create a system assigned identity for the policy assignment
   identity {
     type = "SystemAssigned"
   }
+}
+
+resource "azurerm_subscription_policy_remediation" "sample_remediation" {
+  name                 = "${lower(azurerm_policy_definition.lock.name)}_remediation}"
+  subscription_id      = data.azurerm_subscription.current.id
+  policy_assignment_id = azurerm_subscription_policy_assignment.sample_assignment.id
 }
 
 # The role assignment is required to grant the policy assignment the required permissions to create the lock.
